@@ -14,8 +14,9 @@
 class txtToBinary {
 
 public:
-    std::vector<uint8_t>leerArchivo(std::string& ruta);
-    void escribirArchivo(std::string& ruta, std::vector<uint8_t>& datos);
+    //static para no tener que instanciar un objeto para usarlas
+    static std::vector<uint8_t>leerArchivo(const std::string& ruta);
+    static void escribirArchivo(const std::string& ruta,const std::vector<uint8_t>& datos);
 };
 
 

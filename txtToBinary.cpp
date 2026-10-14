@@ -5,8 +5,9 @@
 #include "txtToBinary.h"
 #include <fstream>
 #include <stdexcept>
+#include <iterator>
 
-std::vector<uint8_t> txtToBinary::leerArchivo(std::string &ruta) {
+std::vector<uint8_t> txtToBinary::leerArchivo(const std::string &ruta) {
     std::ifstream f(ruta, std::ios::binary); //Input File Stream -> lee datos de un archivo
     //ios::binary siendo el modo de apertura, en este caso
     //lo abre como binario puro para evitar conversiones y los char
