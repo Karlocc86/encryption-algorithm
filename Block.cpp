@@ -40,7 +40,7 @@ void Block::blockToBytes(uint64_t bloque, std::vector<int8_t> &datos, size_t ini
 
         //& operacion and en bits. & 0XFF mascara de [1111 1111]
         //Ejemplo
-        //bloque de 64: 11010101 10101010 010101010 10001100
+        //bloque de 32: 11010101 10101010 010101010 10001100
         //0xFF        : 00000000 00000000 000000000 11111111
         //            _______________________________________
         //resultado   : 00000000 00000000 000000000 10001100 <- bloque de 8 bits a guardar
