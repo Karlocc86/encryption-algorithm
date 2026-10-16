@@ -30,9 +30,13 @@ uint64_t SPN::aplicarTabla(uint64_t block, const std::array<uint8_t, 16> &tablit
     uint64_t resultado{}; //{} no mas lo aplique por fanci y para probar. Pero es lo mismo que resultado = 0;
 
     for (int i = 0 ; i < 16 ; i++) {
+
+        //Extraemos lo del inicio al final por nibbles con una mascara [1111] y directamente le aplicamos su valor de
+        //sustitucion de Sbox (el nibble extraido se pasa como idx de Sbox para conseguir su valor de sustitucion)
         uint8_t nibble= tablita[block >> (60 - 4 * i) & 0xF];
 
-        resultado |= static_cast<uint64_t>(nibble) << (60 - 4 * i);
+
+        resultado |= static_cast<uint64_t>(nibble) << (60 - 4 * i); // Se va construyendo el block inverso por asi decirlo
 
     }
     return resultado;
