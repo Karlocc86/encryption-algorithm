@@ -12,8 +12,10 @@ const std::array<uint8_t,16> SPN::sbox = {
 
 std::array<uint8_t, 16> SPN::hacerInversa(const std::array<uint8_t, 16> &sbox) {
 
-    std::array<uint8_t,16> inversa{};
+    std::array<uint8_t,16> inversa{}; // Fanci way de poner inversa = {0}
 
+    //Aqui la llave de sbox pasa a ser el valor de inversa, el valor de sbox para a ser la llave de inversa
+    //Asi al aplicar la reversion podemos regresar lo que fueron originalmente
     for ( int x = 0 ; x < 16 ; x++) {
         inversa[sbox[x]] = static_cast<uint8_t>(x);
     }
