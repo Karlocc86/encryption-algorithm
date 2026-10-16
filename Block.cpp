@@ -22,6 +22,15 @@ uint64_t Block::bytesToBlock(const std::vector<uint8_t> &datos, size_t inicio) {
         // siendo que datos[i] trae enteros de 8 bits c++ lo promovera a uno de 32, y ya que estamos trabajando
         // con 56 - 8 * 1 llegando a mover 56 posiciones o bites, nos dara un desbordamiento mover 56 posiciones a
         // un entero de 32, por eso lo transformamos a uno de 64 y poder almacenar 8 bytes en los 64 bits
+        // |= operacion OR
+        //Ejemplo:
+        //int de 16 bits: 00000000 00000000
+        //operacion   |=: 00000000 10101010
+        //Resultado     : 00000000 10101010
+
+        //operacion << 8: 10101010 00000000
+        //operacion |=  : 00000000 11111111
+        //Resultado     : 10101010 11111111 <- asi vamos construyendo el bloque
         bloque |= static_cast<uint64_t>(datos[inicio + i]) << (56 - 8 * 1);
 
     }
