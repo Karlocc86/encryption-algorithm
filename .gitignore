@@ -13,3 +13,7 @@ CLAUDE.md
 
 # Guias de trabajo locales (lo que se publica va en README.md)
 docs/
+
+# Python
+__pycache__/
+*.pyc
