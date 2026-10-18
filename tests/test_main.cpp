@@ -400,6 +400,26 @@ static void testBlockCipher() {
     }
 }
 
+static void testBlockCipherVectors() {
+    // Vectores de regresion: 3 bloques con 3 claves. No son vectores publicados
+    // (el cifrado es nuestro); los calculo una implementacion independiente de la
+    // especificacion en Python, que no esta en el repo. Si alguno cambia, cambio el cifrado.
+    const auto claves = testKeys(); // [0] ceros, [1] 0xFF, [2] "0123456789ABCDEF"
+    const uint64_t planos[3] = {0x0000000000000000ULL, 0x0123456789ABCDEFULL, 0xFFFFFFFFFFFFFFFFULL};
+    const uint64_t esperados[3][3] = {
+        {0xFBD5EAAB2516F13DULL, 0x3ED97D801B218A9AULL, 0x6B48063149273D1EULL},
+        {0xBC091FC1C7F7BD4EULL, 0xD7985B017686CED2ULL, 0x5846A4A781817688ULL},
+        {0x0EB29014992FA241ULL, 0xF4640B08F3F10C77ULL, 0xA9D085FD50A6AED4ULL},
+    };
+    for (int c = 0; c < 3; c++) {
+        const Schedule s = KeySchedule::expand(claves[c]);
+        for (int p = 0; p < 3; p++) {
+            CHECK(BlockCipher::encryptBlock(planos[p], s) == esperados[c][p]);
+            CHECK(BlockCipher::decryptBlock(esperados[c][p], s) == planos[p]);
+        }
+    }
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -422,6 +442,7 @@ int main() {
     run("rotaciones", testRotations);
     run("KeySchedule", testKeySchedule);
     run("BlockCipher", testBlockCipher);
+    run("BlockCipher vectores", testBlockCipherVectors);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
