@@ -18,6 +18,7 @@
 #include "BlockCipher.h"
 #include "Cbc.h"
 #include "Config.h"
+#include "Encoding.h"
 #include "KeySchedule.h"
 #include "Padding.h"
 #include "Prng.h"
@@ -516,6 +517,41 @@ static void testCbc() {
     CHECK(nuncaOriginal);
 }
 
+static void testEncoding() {
+    // toHex: mayusculas, dos digitos por byte, sin separadores
+    CHECK(Encoding::toHex({0x00, 0xAB, 0x0F, 0xFF}) == "00AB0FFF");
+    CHECK(Encoding::toHex({}).empty());
+
+    // fromHex: acepta minusculas y mayusculas e ignora espacios y saltos de linea
+    CHECK(Encoding::fromHex("00ab0FfF") == (std::vector<uint8_t>{0x00, 0xAB, 0x0F, 0xFF}));
+    CHECK(Encoding::fromHex(" 00 AB\r\n0F\tFF\n") == (std::vector<uint8_t>{0x00, 0xAB, 0x0F, 0xFF}));
+    CHECK(Encoding::fromHex("").empty());
+    CHECK_THROWS(Encoding::fromHex("0G"), std::invalid_argument);
+    CHECK_THROWS(Encoding::fromHex("ABC"), std::invalid_argument);
+
+    // Ida y vuelta con todos los valores de byte
+    std::vector<uint8_t> todos(256);
+    for (int i = 0; i < 256; i++) todos[i] = static_cast<uint8_t>(i);
+    CHECK(Encoding::fromHex(Encoding::toHex(todos)) == todos);
+
+    // parseKey con texto: los bytes, rellenados con ceros
+    CHECK(Encoding::parseKey("a") == keyFromText("a"));
+    CHECK(Encoding::parseKey("0123456789ABCDEF") == keyFromText("0123456789ABCDEF"));
+
+    // parseKey con 32 digitos hexadecimales (mayusculas o minusculas)
+    std::array<uint8_t, KEY_BYTES> esperada{};
+    for (std::size_t i = 0; i < KEY_BYTES; i++) esperada[i] = static_cast<uint8_t>(i * 0x11);
+    CHECK(Encoding::parseKey("00112233445566778899AABBCCDDEEFF") == esperada);
+    CHECK(Encoding::parseKey("00112233445566778899aabbccddeeff") == esperada);
+
+    // Claves invalidas
+    CHECK_THROWS(Encoding::parseKey(""), std::invalid_argument);
+    CHECK_THROWS(Encoding::parseKey("12345678901234567"), std::invalid_argument);            // 17
+    CHECK_THROWS(Encoding::parseKey(std::string(31, 'A')), std::invalid_argument);          // 31
+    CHECK_THROWS(Encoding::parseKey(std::string(33, 'A')), std::invalid_argument);          // 33
+    CHECK_THROWS(Encoding::parseKey("00112233445566778899AABBCCDDEEFG"), std::invalid_argument); // 32 no hex
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -541,6 +577,7 @@ int main() {
     run("BlockCipher vectores", testBlockCipherVectors);
     run("Padding", testPadding);
     run("Cbc", testCbc);
+    run("Encoding", testEncoding);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
