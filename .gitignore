@@ -1,0 +1,15 @@
+# IDEs
+.idea/
+.vscode/
+
+# Compilacion
+cmake-build-*/
+build/
+*.exe
+*.o
+
+# Instrucciones locales de Claude Code
+CLAUDE.md
+
+# Guias de trabajo locales (lo que se publica va en README.md)
+docs/
