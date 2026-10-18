@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "Block.h"
+#include "BlockCipher.h"
 #include "Config.h"
 #include "KeySchedule.h"
 #include "Prng.h"
@@ -366,6 +367,39 @@ static void testKeySchedule() {
     CHECK(a.subkeys[0] == 0x6267A5C8E34DF56CULL);
 }
 
+static void testBlockCipher() {
+    const auto claves = testKeys();
+    std::mt19937_64 gen(31337);
+
+    for (const auto& clave : claves) {
+        const Schedule s = KeySchedule::expand(clave);
+
+        // Ida y vuelta para 10 000 bloques; el cifrado nunca deja el bloque igual
+        bool idaVuelta = true, cambia = true;
+        for (int i = 0; i < 10000; i++) {
+            const uint64_t p = gen();
+            const uint64_t c = BlockCipher::encryptBlock(p, s);
+            idaVuelta = idaVuelta && (BlockCipher::decryptBlock(c, s) == p);
+            cambia = cambia && (c != p);
+        }
+        CHECK(idaVuelta);
+        CHECK(cambia);
+
+        // Determinista: el mismo bloque con la misma clave da lo mismo
+        CHECK(BlockCipher::encryptBlock(0x0123456789ABCDEFULL, s)
+              == BlockCipher::encryptBlock(0x0123456789ABCDEFULL, s));
+
+        // Una clave que difiere en 1 bit no recupera el bloque
+        for (int bit : {0, 63, 127}) {
+            std::array<uint8_t, KEY_BYTES> otra = clave;
+            otra[bit / 8] ^= static_cast<uint8_t>(1u << (bit % 8));
+            const Schedule s2 = KeySchedule::expand(otra);
+            const uint64_t p = 0x0123456789ABCDEFULL;
+            CHECK(BlockCipher::decryptBlock(BlockCipher::encryptBlock(p, s), s2) != p);
+        }
+    }
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -387,6 +421,7 @@ int main() {
     run("permuteBits", testPermuteBits);
     run("rotaciones", testRotations);
     run("KeySchedule", testKeySchedule);
+    run("BlockCipher", testBlockCipher);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
