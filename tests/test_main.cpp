@@ -7,14 +7,17 @@
 #include <array>
 #include <bitset>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "Avalanche.h"
 #include "Block.h"
 #include "BlockCipher.h"
 #include "Cbc.h"
@@ -606,6 +609,25 @@ static void testTextCipher() {
     CHECK(nuncaOriginal);
 }
 
+static void testAvalanche() {
+    // Parametros de la guia: clave "0123456789ABCDEF", mt19937_64(12345),
+    // 1000 bloques para el texto plano y 50 para la clave
+    const auto clave = keyFromText("0123456789ABCDEF");
+    const auto inicio = std::chrono::steady_clock::now();
+    const double plano = Avalanche::plaintext(clave, 1000, 12345);
+    const double deClave = Avalanche::key(clave, 50, 12345);
+    const double segundos = std::chrono::duration<double>(std::chrono::steady_clock::now() - inicio).count();
+
+    std::cout << std::fixed << std::setprecision(2)
+              << "  Avalancha: texto plano " << plano << " bits, clave " << deClave
+              << " bits (ideal 32), " << segundos << " s\n";
+
+    // Criterio de aceptacion de la guia: entre 28 y 36 bits de 64
+    CHECK(plano >= 28.0 && plano <= 36.0);
+    CHECK(deClave >= 28.0 && deClave <= 36.0);
+    CHECK(segundos < 10.0);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -633,6 +655,7 @@ int main() {
     run("Cbc", testCbc);
     run("Encoding", testEncoding);
     run("TextCipher", testTextCipher);
+    run("Avalancha", testAvalanche);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
