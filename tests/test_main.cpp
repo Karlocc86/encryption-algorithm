@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <bitset>
+#include <cctype>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -24,6 +25,7 @@
 #include "Prng.h"
 #include "SPN.h"
 #include "Tables.h"
+#include "TextCipher.h"
 #include "txtToBinary.h"
 
 namespace fs = std::filesystem;
@@ -552,6 +554,58 @@ static void testEncoding() {
     CHECK_THROWS(Encoding::parseKey("00112233445566778899AABBCCDDEEFG"), std::invalid_argument); // 32 no hex
 }
 
+static void testTextCipher() {
+    const std::string clave = "0123456789ABCDEF";
+    const std::string claveHex = "00112233445566778899AABBCCDDEEFF";
+
+    // Ida y vuelta con clave de texto y hexadecimal, incluida la ó (2 bytes) y \r\n
+    const std::string textos[] = {"Hola mundo", "", "m de megalod\xC3\xB3n", "linea 1\r\nlinea 2",
+                                  std::string(100, 'x')};
+    bool idaVuelta = true, esHex = true;
+    for (const std::string& t : textos) {
+        for (const std::string& k : {clave, claveHex}) {
+            const std::string hex = TextCipher::encryptText(t, k);
+            idaVuelta = idaVuelta && (TextCipher::decryptText(hex, k) == t);
+            esHex = esHex && (hex.find_first_not_of("0123456789ABCDEF") == std::string::npos)
+                          && (hex.size() == 2 * (8 + Padding::pad(std::vector<uint8_t>(t.size())).size()));
+        }
+    }
+    CHECK(idaVuelta);
+    CHECK(esHex);
+
+    // El hexadecimal se puede pegar con espacios, saltos de linea y en minusculas
+    std::string hex = TextCipher::encryptText("Hola mundo", clave);
+    std::string pegado;
+    for (std::size_t i = 0; i < hex.size(); i++) {
+        pegado += static_cast<char>(std::tolower(static_cast<unsigned char>(hex[i])));
+        if (i % 8 == 7) pegado += (i % 16 == 15) ? "\r\n" : " ";
+    }
+    CHECK(TextCipher::decryptText(pegado, clave) == "Hola mundo");
+
+    // IV aleatorio: el mismo texto da hexadecimales distintos
+    CHECK(TextCipher::encryptText("Hola mundo", clave) != TextCipher::encryptText("Hola mundo", clave));
+
+    // Limite de 100 bytes (101 se rechaza)
+    CHECK_THROWS(TextCipher::encryptText(std::string(101, 'x'), clave), std::invalid_argument);
+
+    // Entradas invalidas al descifrar
+    CHECK_THROWS(TextCipher::decryptText("XYZ", clave), std::invalid_argument);          // no es hex
+    CHECK_THROWS(TextCipher::decryptText("0011223344556677", clave), std::invalid_argument); // solo IV
+    CHECK_THROWS(TextCipher::decryptText(hex + "00", clave), std::invalid_argument);     // largo incorrecto
+    CHECK_THROWS(TextCipher::encryptText("hola", ""), std::invalid_argument);            // clave vacia
+
+    // Clave equivocada: error o texto distinto, nunca el original
+    bool nuncaOriginal = true;
+    for (int i = 0; i < 100; i++) {
+        const std::string h = TextCipher::encryptText("Hola mundo", clave);
+        try {
+            nuncaOriginal = nuncaOriginal && (TextCipher::decryptText(h, "0123456789ABCDEG") != "Hola mundo");
+        } catch (const std::invalid_argument&) {
+        }
+    }
+    CHECK(nuncaOriginal);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -578,6 +632,7 @@ int main() {
     run("Padding", testPadding);
     run("Cbc", testCbc);
     run("Encoding", testEncoding);
+    run("TextCipher", testTextCipher);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
