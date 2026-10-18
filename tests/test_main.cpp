@@ -3,6 +3,7 @@
 // Se ejecuta con ciber_tests (o con ctest) e imprime "N checks, M fallos".
 //
 
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -15,6 +16,7 @@
 #include "Config.h"
 #include "Prng.h"
 #include "SPN.h"
+#include "Tables.h"
 #include "txtToBinary.h"
 
 namespace fs = std::filesystem;
@@ -157,6 +159,54 @@ static void testPrng() {
     CHECK(distintasHi);
 }
 
+// Permutacion de bits de PRESENT: P(i) = 16i mod 63, con P(63) = 63
+static std::array<uint8_t, 64> presentPerm() {
+    std::array<uint8_t, 64> p{};
+    for (int i = 0; i < 63; i++) p[i] = static_cast<uint8_t>((16 * i) % 63);
+    p[63] = 63;
+    return p;
+}
+
+static void testTables() {
+    // Vectores de modInverse de la guia
+    CHECK(Tables::modInverse(1) == 1);
+    CHECK(Tables::modInverse(3) == 0xAAAAAAAAAAAAAAABULL);
+    CHECK(Tables::modInverse(0xFFFFFFFFFFFFFFFFULL) == 0xFFFFFFFFFFFFFFFFULL);
+
+    // m * modInverse(m) == 1 para 1000 impares aleatorios
+    std::mt19937_64 gen(12345);
+    bool todosUno = true;
+    for (int i = 0; i < 1000; i++) {
+        const uint64_t m = gen() | 1;
+        todosUno = todosUno && (m * Tables::modInverse(m) == 1);
+    }
+    CHECK(todosUno);
+
+    // Un par no tiene inverso
+    CHECK_THROWS(Tables::modInverse(0), std::invalid_argument);
+    CHECK_THROWS(Tables::modInverse(2), std::invalid_argument);
+
+    // Inversa de la S-box de PRESENT: S[0] = 0xC, asi que inv[0xC] = 0
+    const std::array<uint8_t, 16> invS = Tables::invertTable(Tables::PRESENT_SBOX);
+    CHECK(invS[0xC] == 0x0);
+    CHECK(invS[0x2] == 0xF);
+    CHECK(Tables::invertTable(invS) == Tables::PRESENT_SBOX);
+
+    // Inversa de la permutacion de PRESENT y vuelta
+    const std::array<uint8_t, 64> perm = presentPerm();
+    const std::array<uint8_t, 64> invP = Tables::invertTable(perm);
+    CHECK(invP[16] == 1); // el bit 1 va al 16, asi que el 16 viene del 1
+    CHECK(Tables::invertTable(invP) == perm);
+
+    // Tablas que no son permutaciones
+    std::array<uint8_t, 16> repetida = Tables::PRESENT_SBOX;
+    repetida[1] = repetida[0];
+    CHECK_THROWS(Tables::invertTable(repetida), std::invalid_argument);
+    std::array<uint8_t, 16> fueraDeRango = Tables::PRESENT_SBOX;
+    fueraDeRango[0] = 16;
+    CHECK_THROWS(Tables::invertTable(fueraDeRango), std::invalid_argument);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -174,6 +224,7 @@ int main() {
     run("txtToBinary", testTxtToBinary);
     run("SPN", testSPN);
     run("Prng", testPrng);
+    run("Tables", testTables);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
