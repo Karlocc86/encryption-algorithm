@@ -15,6 +15,7 @@
 
 #include "Block.h"
 #include "Config.h"
+#include "KeySchedule.h"
 #include "Prng.h"
 #include "SPN.h"
 #include "Tables.h"
@@ -259,6 +260,112 @@ static void testRotations() {
     CHECK_THROWS(SPN::rotr(1, 64), std::invalid_argument);
 }
 
+// Clave de 16 bytes a partir de un texto (relleno con ceros), como hara parseKey
+static std::array<uint8_t, KEY_BYTES> keyFromText(const std::string& texto) {
+    std::array<uint8_t, KEY_BYTES> k{};
+    for (std::size_t i = 0; i < texto.size() && i < KEY_BYTES; i++) k[i] = static_cast<uint8_t>(texto[i]);
+    return k;
+}
+
+// Las 5 claves de prueba de la guia: ceros, 0xFF, "0123456789ABCDEF", "a" y una aleatoria
+static std::vector<std::array<uint8_t, KEY_BYTES>> testKeys() {
+    std::array<uint8_t, KEY_BYTES> ceros{}, unos{}, aleatoria{};
+    unos.fill(0xFF);
+    std::mt19937_64 gen(99);
+    for (auto& b : aleatoria) b = static_cast<uint8_t>(gen());
+    return {ceros, unos, keyFromText("0123456789ABCDEF"), keyFromText("a"), aleatoria};
+}
+
+static std::string hexNibbles(const std::array<uint8_t, 16>& t) {
+    const char* dig = "0123456789ABCDEF";
+    std::string s;
+    for (uint8_t v : t) s += dig[v & 0xF];
+    return s;
+}
+
+static bool sameSchedule(const Schedule& a, const Schedule& b) {
+    return a.sbox == b.sbox && a.invSbox == b.invSbox && a.perm == b.perm && a.invPerm == b.invPerm
+        && a.rot == b.rot && a.mul == b.mul && a.mulInv == b.mulInv && a.subkeys == b.subkeys;
+}
+
+static void testKeySchedule() {
+    // La condicion de los nibbles: la identidad no la cumple, la de PRESENT si
+    std::array<uint8_t, 64> identidad{};
+    for (int i = 0; i < 64; i++) identidad[i] = static_cast<uint8_t>(i);
+    CHECK(!KeySchedule::spreadsNibbles(identidad));
+    CHECK(KeySchedule::spreadsNibbles(presentPerm()));
+
+    const auto claves = testKeys();
+    const char* nombres[] = {"ceros", "0xFF", "0123456789ABCDEF", "a", "aleatoria"};
+    std::vector<Schedule> schedules;
+
+    for (std::size_t c = 0; c < claves.size(); c++) {
+        const Schedule s = KeySchedule::expand(claves[c]);
+        schedules.push_back(s);
+
+        // S-box: permutacion sin puntos fijos, con su inversa correcta
+        CHECK(s.invSbox == Tables::invertTable(s.sbox)); // invertTable lanza si no es permutacion
+        bool sinPuntosFijos = true;
+        for (int x = 0; x < 16; x++) sinPuntosFijos = sinPuntosFijos && (s.sbox[x] != x);
+        CHECK(sinPuntosFijos);
+
+        // Permutacion de bits: valida, con su inversa, y cumple la condicion de los nibbles
+        CHECK(s.invPerm == Tables::invertTable(s.perm));
+        CHECK(KeySchedule::spreadsNibbles(s.perm));
+
+        // Rotaciones de 1 a 63; multiplicadores impares con su inverso
+        bool rotOk = true, mulOk = true;
+        for (std::size_t r = 0; r < ROUNDS; r++) {
+            rotOk = rotOk && s.rot[r] >= 1 && s.rot[r] <= 63;
+            mulOk = mulOk && (s.mul[r] & 1) && (s.mul[r] * s.mulInv[r] == 1);
+        }
+        CHECK(rotOk);
+        CHECK(mulOk);
+        CHECK(s.subkeys.size() == 11);
+
+        // Determinista: la misma clave da exactamente las mismas tablas
+        CHECK(sameSchedule(s, KeySchedule::expand(claves[c])));
+
+        // La guia pide reportar los intentos (se esperan cientos para la permutacion)
+        CHECK(s.permAttempts <= 10000);
+        std::cout << "  KeySchedule [" << nombres[c] << "]: sbox " << s.sboxAttempts
+                  << " intentos, perm " << s.permAttempts << " intentos\n";
+    }
+
+    // Claves distintas dan tablas distintas
+    bool distintas = true;
+    for (std::size_t i = 0; i < schedules.size(); i++)
+        for (std::size_t j = i + 1; j < schedules.size(); j++)
+            distintas = distintas && schedules[i].perm != schedules[j].perm
+                                  && schedules[i].subkeys != schedules[j].subkeys;
+    CHECK(distintas);
+
+    // Vectores cruzados con una referencia independiente en Python de la especificacion
+    const Schedule& z = schedules[0];
+    CHECK(hexNibbles(z.sbox) == "3497BA20516C8EFD");
+    CHECK(z.sboxAttempts == 8 && z.permAttempts == 103);
+    CHECK(z.perm[0] == 49 && z.perm[1] == 4 && z.perm[2] == 32 && z.perm[7] == 24);
+    CHECK((z.rot == std::array<unsigned, ROUNDS>{27, 63, 48, 44, 4, 34, 26, 9, 21, 49}));
+    CHECK(z.mul[0] == 0x9C0EEB7F67416D0FULL);
+    CHECK(z.subkeys[0] == 0x5D594A26F9DC2C96ULL && z.subkeys[10] == 0x776E6DF80AA98AF9ULL);
+
+    const Schedule& f = schedules[1];
+    CHECK(hexNibbles(f.sbox) == "C0E7D642AB1359F8");
+    CHECK(f.subkeys[0] == 0x88C4CBB5D56EE87EULL && f.subkeys[10] == 0x2EC592C76EE82A59ULL);
+
+    const Schedule& t = schedules[2];
+    CHECK(hexNibbles(t.sbox) == "4DE8BC23615F7A90");
+    CHECK(t.sboxAttempts == 3 && t.permAttempts == 243);
+    CHECK((t.rot == std::array<unsigned, ROUNDS>{31, 7, 35, 16, 42, 45, 40, 8, 31, 57}));
+    CHECK(t.mul[0] == 0xC4B618A382D3322BULL);
+    CHECK(t.subkeys[0] == 0xF90009F518B44CA6ULL && t.subkeys[10] == 0xC20D2BC65019F4E3ULL);
+
+    const Schedule& a = schedules[3];
+    CHECK(hexNibbles(a.sbox) == "EF3C9BD061872A45");
+    CHECK(a.perm[0] == 44 && a.perm[7] == 43);
+    CHECK(a.subkeys[0] == 0x6267A5C8E34DF56CULL);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -279,6 +386,7 @@ int main() {
     run("Tables", testTables);
     run("permuteBits", testPermuteBits);
     run("rotaciones", testRotations);
+    run("KeySchedule", testKeySchedule);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
