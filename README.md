@@ -313,7 +313,7 @@ La interfaz no contiene nada del algoritmo: cada botón ejecuta `ciber`. La ruta
 | `Cifrar ↓` | Cifra el texto y muestra el hexadecimal abajo |
 | Texto cifrado | Editable: se puede pegar un cifrado, incluso partido en líneas |
 | `Descifrar ↑` | Descifra el cuadro de abajo y muestra el texto arriba |
-| `Abrir archivo` / `Guardar resultado` | Cargan o guardan el contenido del último cuadro en el que se hizo clic |
+| `Abrir archivo` / `Guardar resultado` | Cada cuadro tiene los suyos, junto a su título: arriba cargan o guardan el texto original y abajo el texto cifrado (hexadecimal), en UTF-8 |
 | `Ver tablas` | Muestra las tablas de la clave escrita, para enseñar que cambian con la clave |
 
 Los errores (clave inválida, hexadecimal inválido, clave equivocada, texto de más de 100 bytes) se muestran en un mensaje, sin cerrar el programa.
