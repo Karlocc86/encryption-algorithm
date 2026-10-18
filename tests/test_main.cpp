@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "Block.h"
+#include "Config.h"
 #include "SPN.h"
 #include "txtToBinary.h"
 
@@ -32,6 +33,13 @@ static int g_total = 0, g_fail = 0;
 // Ruta de un archivo temporal fuera del repositorio, para no ensuciarlo
 static std::string tempPath(const std::string& nombre) {
     return (fs::temp_directory_path() / ("ciber_test_" + nombre)).string();
+}
+
+static void testConfig() {
+    // Relaciones que el resto del cifrado da por hechas
+    CHECK(BLOCK_BYTES * 8 == 64);
+    CHECK(KEY_BYTES == 2 * BLOCK_BYTES);
+    CHECK(SUBKEYS == ROUNDS + 1);
 }
 
 static void testBlock() {
@@ -124,6 +132,7 @@ static void run(const char* nombre, void (*prueba)()) {
 }
 
 int main() {
+    run("Config", testConfig);
     run("Block", testBlock);
     run("txtToBinary", testTxtToBinary);
     run("SPN", testSPN);
