@@ -4,6 +4,7 @@
 //
 
 #include <array>
+#include <bitset>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -211,6 +212,29 @@ static void testTables() {
     CHECK_THROWS(Tables::invertTable(fueraDeRango), std::invalid_argument);
 }
 
+static void testPermuteBits() {
+    // Vectores verificados a mano con la permutacion de PRESENT
+    const std::array<uint8_t, 64> P = presentPerm();
+    CHECK(SPN::permuteBits(0x1ULL, P) == 0x1ULL);
+    CHECK(SPN::permuteBits(0x2ULL, P) == 0x10000ULL);
+    CHECK(SPN::permuteBits(0x10ULL, P) == 0x2ULL);
+    CHECK(SPN::permuteBits(0xF0ULL, P) == 0x0002000200020002ULL);
+    CHECK(SPN::permuteBits(0x8000000000000000ULL, P) == 0x8000000000000000ULL);
+
+    // Con la tabla inversa se deshace, y nunca cambia cuantos bits hay en 1
+    const std::array<uint8_t, 64> invP = Tables::invertTable(P);
+    std::mt19937_64 gen(777);
+    bool idaVuelta = true, mismosUnos = true;
+    for (int i = 0; i < 10000; i++) {
+        const uint64_t v = gen();
+        const uint64_t p = SPN::permuteBits(v, P);
+        idaVuelta = idaVuelta && (SPN::permuteBits(p, invP) == v);
+        mismosUnos = mismosUnos && (std::bitset<64>(p).count() == std::bitset<64>(v).count());
+    }
+    CHECK(idaVuelta);
+    CHECK(mismosUnos);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -229,6 +253,7 @@ int main() {
     run("SPN", testSPN);
     run("Prng", testPrng);
     run("Tables", testTables);
+    run("permuteBits", testPermuteBits);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;

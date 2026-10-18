@@ -30,3 +30,18 @@ uint64_t SPN::subNibbles(uint64_t block, const std::array<uint8_t, 16> &table) {
     // los recorre (del mas alto al mas bajo) no cambia el resultado
     return aplicarTabla(block, table);
 }
+
+uint64_t SPN::permuteBits(uint64_t block, const std::array<uint8_t, 64> &table) {
+
+    uint64_t resultado = 0;
+
+    for (unsigned i = 0; i < 64; i++) {
+        // Sacamos el bit i: lo bajamos a la posicion 0 y lo aislamos con la mascara 1
+        const uint64_t bit = (block >> i) & 1ULL;
+
+        // Y lo pegamos en su nueva posicion. Como bit ya es uint64_t, el << puede
+        // llegar hasta la posicion 63 sin que C++ lo promueva a un int de 32 bits
+        resultado |= bit << table[i];
+    }
+    return resultado;
+}

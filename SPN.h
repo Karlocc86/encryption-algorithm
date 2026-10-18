@@ -28,6 +28,18 @@ public:
      */
     static uint64_t subNibbles(uint64_t block, const std::array<uint8_t, 16>& table);
 
+    // La fase de difusion
+
+    /**
+     * Mueve cada bit del bloque a otra posicion: el bit i pasa al bit table[i].
+     * Asi los 4 bits que salen de una S-box llegan a S-boxes distintas en la
+     * siguiente ronda.
+     * @param block bloque de 64 bits
+     * @param table permutacion de 0 a 63 (o su inversa, para descifrar)
+     * @return el bloque con los bits reacomodados (conserva cuantos bits hay en 1)
+     */
+    static uint64_t permuteBits(uint64_t block, const std::array<uint8_t, 64>& table);
+
 };
 
 
