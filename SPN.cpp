@@ -4,26 +4,9 @@
 
 #include "SPN.h"
 
-const std::array<uint8_t,16> SPN::sbox = {
-    0xC, 0x5, 0x6, 0xB, 0x9, 0x0, 0xA, 0xD,
-   0x3, 0xE, 0xF, 0x8, 0x4, 0x7, 0x1, 0x2
-};
-
-
-std::array<uint8_t, 16> SPN::hacerInversa(const std::array<uint8_t, 16> &sbox) {
-
-    std::array<uint8_t,16> inversa{}; // Fanci way de poner inversa = {0}
-
-    //Aqui la llave de sbox pasa a ser el valor de inversa, el valor de sbox para a ser la llave de inversa
-    //Asi al aplicar la reversion podemos regresar lo que fueron originalmente
-    for ( int x = 0 ; x < 16 ; x++) {
-        inversa[sbox[x]] = static_cast<uint8_t>(x);
-    }
-
-    return inversa;
-}
-
-const std::array<uint8_t,16> SPN::invSbox = hacerInversa(sbox);
+// La S-box fija de PRESENT y hacerInversa se fueron: ahora la S-box sale de la
+// clave (KeySchedule), PRESENT_SBOX vive en Tables solo para pruebas, y la
+// inversa la calcula Tables::invertTable (que ademas valida la tabla).
 
 uint64_t SPN::aplicarTabla(uint64_t block, const std::array<uint8_t, 16> &tablita) {
 
@@ -42,10 +25,8 @@ uint64_t SPN::aplicarTabla(uint64_t block, const std::array<uint8_t, 16> &tablit
     return resultado;
 }
 
-uint64_t SPN::subNibbles(uint64_t block) {
-    return aplicarTabla(block,sbox);
-}
-
-uint64_t SPN::invSubNibbles(uint64_t block) {
-    return aplicarTabla(block,invSbox);
+uint64_t SPN::subNibbles(uint64_t block, const std::array<uint8_t, 16> &table) {
+    // Cada nibble se sustituye por separado, asi que el orden en que aplicarTabla
+    // los recorre (del mas alto al mas bajo) no cambia el resultado
+    return aplicarTabla(block, table);
 }

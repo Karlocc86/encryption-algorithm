@@ -109,18 +109,22 @@ static void testTxtToBinary() {
 }
 
 static void testSPN() {
-    // Vectores verificados a mano con la S-box de PRESENT (la fija que hoy tiene SPN)
-    CHECK(SPN::subNibbles(0x0123456789ABCDEFULL) == 0xC56B90AD3EF84712ULL);
-    CHECK(SPN::subNibbles(0x0000000000000000ULL) == 0xCCCCCCCCCCCCCCCCULL);
-    CHECK(SPN::subNibbles(0xFFFFFFFFFFFFFFFFULL) == 0x2222222222222222ULL);
+    // Vectores verificados a mano con la S-box de PRESENT pasada como parametro
+    const std::array<uint8_t, 16>& S = Tables::PRESENT_SBOX;
+    CHECK(SPN::subNibbles(0x0123456789ABCDEFULL, S) == 0xC56B90AD3EF84712ULL);
+    CHECK(SPN::subNibbles(0x0000000000000000ULL, S) == 0xCCCCCCCCCCCCCCCCULL);
+    CHECK(SPN::subNibbles(0xFFFFFFFFFFFFFFFFULL, S) == 0x2222222222222222ULL);
 
-    // invSubNibbles deshace subNibbles y viceversa
+    // Con la tabla inversa, subNibbles se deshace (10 000 valores, en ambos sentidos)
+    const std::array<uint8_t, 16> invS = Tables::invertTable(S);
     std::mt19937_64 gen(12345);
-    for (int i = 0; i < 1000; i++) {
+    bool idaVuelta = true;
+    for (int i = 0; i < 10000; i++) {
         const uint64_t v = gen();
-        CHECK(SPN::invSubNibbles(SPN::subNibbles(v)) == v);
-        CHECK(SPN::subNibbles(SPN::invSubNibbles(v)) == v);
+        idaVuelta = idaVuelta && (SPN::subNibbles(SPN::subNibbles(v, S), invS) == v)
+                              && (SPN::subNibbles(SPN::subNibbles(v, invS), S) == v);
     }
+    CHECK(idaVuelta);
 }
 
 static void testPrng() {

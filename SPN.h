@@ -14,15 +14,19 @@
 class SPN {
 
 private:
-    static const std::array<uint8_t, 16> sbox;
-    static const std::array<uint8_t, 16> invSbox;
-    static std::array<uint8_t,16> hacerInversa(const std::array<uint8_t ,16>& sbox);
     static uint64_t aplicarTabla(uint64_t block, const std::array<uint8_t, 16>& tablita);
 
 public:
-    // La fase de confusion
-    static uint64_t subNibbles(uint64_t block);
-    static uint64_t invSubNibbles(uint64_t block);
+    // La fase de confusion. La S-box ya no es fija: sale de la clave (KeySchedule)
+    // y se pasa como parametro. Para deshacerla se pasa la tabla inversa.
+
+    /**
+     * Sustituye cada uno de los 16 nibbles del bloque usando la tabla.
+     * @param block bloque de 64 bits
+     * @param table S-box de 4 bits (o su inversa, para descifrar)
+     * @return el bloque con cada nibble x cambiado por table[x]
+     */
+    static uint64_t subNibbles(uint64_t block, const std::array<uint8_t, 16>& table);
 
 };
 
