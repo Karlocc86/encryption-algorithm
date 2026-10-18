@@ -13,6 +13,7 @@
 
 #include "Block.h"
 #include "Config.h"
+#include "Prng.h"
 #include "SPN.h"
 #include "txtToBinary.h"
 
@@ -120,6 +121,42 @@ static void testSPN() {
     }
 }
 
+static void testPrng() {
+    // Vector publicado de splitmix64 (primera salida con x = 0); tambien cruzado
+    // con una referencia independiente en Python
+    uint64_t x = 0;
+    CHECK(Prng::splitmix64(x) == 0xE220A8397B1DCDAFULL);
+    CHECK(x == 0x9E3779B97F4A7C15ULL); // x avanzo exactamente una vez
+
+    // Primeras salidas de next(), cruzadas con la referencia en Python
+    Prng p(0x0123456789ABCDEFULL, 0xFEDCBA9876543210ULL);
+    CHECK(p.next() == 0x70FB7C77B676C8CBULL);
+    CHECK(p.next() == 0xDC66249BA38DF6EBULL);
+    CHECK(p.next() == 0x002500F6BECFC2ABULL);
+
+    // La clave de puros ceros no deja al generador atorado en ceros
+    Prng ceros(0, 0);
+    CHECK(ceros.next() == 0xDEC90D521E93E35DULL);
+    CHECK(ceros.next() == 0x99EC5F36CB75F2B4ULL);
+
+    // Misma semilla, misma secuencia (determinista)
+    Prng a(42, 7), b(42, 7);
+    bool iguales = true;
+    for (int i = 0; i < 1000; i++) iguales = iguales && (a.next() == b.next());
+    CHECK(iguales);
+
+    // Semillas que difieren en un solo bit dan secuencias distintas
+    Prng c(42, 7), d(42, 6), e(43, 7);
+    bool distintasLo = false, distintasHi = false;
+    for (int i = 0; i < 16; i++) {
+        const uint64_t vc = c.next();
+        distintasLo = distintasLo || (vc != d.next());
+        distintasHi = distintasHi || (vc != e.next());
+    }
+    CHECK(distintasLo);
+    CHECK(distintasHi);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -136,6 +173,7 @@ int main() {
     run("Block", testBlock);
     run("txtToBinary", testTxtToBinary);
     run("SPN", testSPN);
+    run("Prng", testPrng);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
