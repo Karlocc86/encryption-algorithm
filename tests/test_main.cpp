@@ -17,6 +17,7 @@
 #include "BlockCipher.h"
 #include "Config.h"
 #include "KeySchedule.h"
+#include "Padding.h"
 #include "Prng.h"
 #include "SPN.h"
 #include "Tables.h"
@@ -420,6 +421,40 @@ static void testBlockCipherVectors() {
     }
 }
 
+static void testPadding() {
+    // Vectores de la guia
+    CHECK(Padding::pad({}) == std::vector<uint8_t>(8, 0x08));
+    const std::vector<uint8_t> siete = {1, 2, 3, 4, 5, 6, 7};
+    CHECK(Padding::pad(siete) == (std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 0x01}));
+    const std::vector<uint8_t> ocho = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<uint8_t> ochoConRelleno = ocho;
+    ochoConRelleno.insert(ochoConRelleno.end(), 8, 0x08);
+    CHECK(Padding::pad(ocho) == ochoConRelleno);
+
+    // Ida y vuelta y largo siempre multiplo de 8, para largos de 0 a 40
+    bool idaVuelta = true, multiplo = true;
+    for (std::size_t len = 0; len <= 40; len++) {
+        std::vector<uint8_t> m(len);
+        for (std::size_t i = 0; i < len; i++) m[i] = static_cast<uint8_t>(i * 37);
+        const std::vector<uint8_t> p = Padding::pad(m);
+        multiplo = multiplo && (p.size() % 8 == 0) && (p.size() > len) && (p.size() <= len + 8);
+        idaVuelta = idaVuelta && (Padding::unpad(p) == m);
+    }
+    CHECK(idaVuelta);
+    CHECK(multiplo);
+
+    // Rellenos invalidos
+    std::vector<uint8_t> cero = {1, 2, 3, 4, 5, 6, 7, 0};
+    std::vector<uint8_t> nueve = {1, 2, 3, 4, 5, 6, 7, 9};
+    std::vector<uint8_t> distintos = {1, 2, 3, 4, 5, 2, 3, 3}; // dice 3 pero hay 2 3 3
+    std::vector<uint8_t> noMultiplo = {1, 2, 3, 1};
+    CHECK_THROWS(Padding::unpad(cero), std::invalid_argument);
+    CHECK_THROWS(Padding::unpad(nueve), std::invalid_argument);
+    CHECK_THROWS(Padding::unpad(distintos), std::invalid_argument);
+    CHECK_THROWS(Padding::unpad(noMultiplo), std::invalid_argument);
+    CHECK_THROWS(Padding::unpad({}), std::invalid_argument);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -443,6 +478,7 @@ int main() {
     run("KeySchedule", testKeySchedule);
     run("BlockCipher", testBlockCipher);
     run("BlockCipher vectores", testBlockCipherVectors);
+    run("Padding", testPadding);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
