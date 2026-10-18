@@ -114,8 +114,14 @@ class CiberApp:
         tk.Entry(key_row, textvariable=self.key_var, width=40).pack(side="left", padx=4)
         tk.Label(key_row, text="(1 a 16 caracteres o 32 digitos hexadecimales)", fg="gray30").pack(side="left")
 
-        # Texto original
-        tk.Label(root, text="Texto original:").pack(anchor="w", padx=10)
+        # Texto original, con sus propios botones de archivo
+        plain_head = tk.Frame(root)
+        plain_head.pack(fill="x", padx=10)
+        tk.Label(plain_head, text="Texto original:").pack(side="left")
+        tk.Button(plain_head, text="Guardar resultado",
+                  command=lambda: self.save_file(self.plain, "Guardar texto original")).pack(side="right")
+        tk.Button(plain_head, text="Abrir archivo",
+                  command=lambda: self.open_file(self.plain, "Abrir texto original")).pack(side="right", padx=6)
         self.plain = scrolledtext.ScrolledText(root, height=6, wrap="word", undo=True)
         self.plain.pack(fill="both", expand=True, padx=10)
         self.counter = tk.Label(root, anchor="e")
@@ -128,28 +134,25 @@ class CiberApp:
         tk.Button(mid, text="Cifrar ↓", width=14, command=self.do_encrypt).pack(side="left", padx=6)
         tk.Button(mid, text="Descifrar ↑", width=14, command=self.do_decrypt).pack(side="left", padx=6)
 
-        # Texto cifrado (hexadecimal, editable para poder pegar un cifrado)
-        tk.Label(root, text="Texto cifrado (hexadecimal):").pack(anchor="w", padx=10)
+        # Texto cifrado (hexadecimal, editable para poder pegar un cifrado), con sus botones
+        cipher_head = tk.Frame(root)
+        cipher_head.pack(fill="x", padx=10)
+        tk.Label(cipher_head, text="Texto cifrado (hexadecimal):").pack(side="left")
+        tk.Button(cipher_head, text="Guardar resultado",
+                  command=lambda: self.save_file(self.cipher, "Guardar texto cifrado (hexadecimal)")).pack(side="right")
+        tk.Button(cipher_head, text="Abrir archivo",
+                  command=lambda: self.open_file(self.cipher, "Abrir texto cifrado (hexadecimal)")).pack(side="right", padx=6)
         self.cipher = scrolledtext.ScrolledText(root, height=6, wrap="char", font=("Consolas", 10))
         self.cipher.pack(fill="both", expand=True, padx=10)
 
-        # Archivos y tablas
+        # Tablas de la clave
         bottom = tk.Frame(root)
         bottom.pack(fill="x", padx=10, pady=10)
-        tk.Button(bottom, text="Abrir archivo", command=self.open_file).pack(side="left")
-        tk.Button(bottom, text="Guardar resultado", command=self.save_file).pack(side="left", padx=6)
         tk.Button(bottom, text="Ver tablas", command=self.do_tables).pack(side="right")
 
-        # "Cuadro activo": el ultimo en el que se hizo clic; ahi abren y guardan los botones
-        self.active = self.plain
-        self.plain.bind("<FocusIn>", lambda _e: self.set_active(self.plain))
-        self.cipher.bind("<FocusIn>", lambda _e: self.set_active(self.cipher))
         self.update_counter()
 
     # --- utilidades de la ventana ---
-
-    def set_active(self, box):
-        self.active = box
 
     def get_text(self, box):
         return box.get("1.0", "end-1c")  # end-1c: sin el salto de linea que Tk agrega al final
@@ -202,8 +205,10 @@ class CiberApp:
         box.insert("1.0", "Estas tablas salen de la clave: si cambias la clave, cambian.\n\n" + result)
         box.config(state="disabled")
 
-    def open_file(self):
-        path = filedialog.askopenfilename(title="Abrir archivo de texto")
+    def open_file(self, box, title):
+        """Carga un archivo de texto (UTF-8) en el cuadro indicado (arriba o abajo)."""
+        path = filedialog.askopenfilename(title=title,
+                                          filetypes=[("Texto", "*.txt"), ("Todos", "*.*")])
         if not path:
             return
         try:
@@ -212,16 +217,18 @@ class CiberApp:
         except OSError as e:
             self.error("No se pudo abrir el archivo:\n%s" % e)
             return
-        self.set_text(self.active, text)
-        self.update_counter()
+        self.set_text(box, text)
+        self.update_counter()  # si fue en el cuadro de arriba, el contador lo refleja
 
-    def save_file(self):
-        path = filedialog.asksaveasfilename(title="Guardar resultado", defaultextension=".txt")
+    def save_file(self, box, title):
+        """Guarda en UTF-8 el contenido del cuadro indicado (arriba o abajo)."""
+        path = filedialog.asksaveasfilename(title=title, defaultextension=".txt",
+                                            filetypes=[("Texto", "*.txt"), ("Todos", "*.*")])
         if not path:
             return
         try:
             with open(path, "wb") as f:
-                f.write(self.get_text(self.active).encode("utf-8"))
+                f.write(self.get_text(box).encode("utf-8"))
         except OSError as e:
             self.error("No se pudo guardar el archivo:\n%s" % e)
 
