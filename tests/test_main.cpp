@@ -3,6 +3,7 @@
 // Se ejecuta con ciber_tests (o con ctest) e imprime "N checks, M fallos".
 //
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <cstdint>
@@ -15,6 +16,7 @@
 
 #include "Block.h"
 #include "BlockCipher.h"
+#include "Cbc.h"
 #include "Config.h"
 #include "KeySchedule.h"
 #include "Padding.h"
@@ -455,6 +457,65 @@ static void testPadding() {
     CHECK_THROWS(Padding::unpad({}), std::invalid_argument);
 }
 
+static void testCbc() {
+    const Schedule s = KeySchedule::expand(keyFromText("0123456789ABCDEF"));
+    const std::array<uint8_t, BLOCK_BYTES> iv = {0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0xFE};
+
+    // Ida y vuelta para largos de 0 a 64 y para 100 y 1000 bytes, con IV fijo y aleatorio
+    std::vector<std::size_t> largos;
+    for (std::size_t l = 0; l <= 64; l++) largos.push_back(l);
+    largos.push_back(100);
+    largos.push_back(1000);
+
+    std::mt19937_64 gen(4242);
+    bool idaVuelta = true, tamano = true, empiezaConIv = true;
+    for (std::size_t len : largos) {
+        std::vector<uint8_t> m(len);
+        for (auto& b : m) b = static_cast<uint8_t>(gen());
+        const std::vector<uint8_t> c = Cbc::encrypt(m, s, iv);
+        idaVuelta = idaVuelta && (Cbc::decrypt(c, s) == m)
+                              && (Cbc::decrypt(Cbc::encrypt(m, s), s) == m);
+        tamano = tamano && (c.size() == 8 + Padding::pad(m).size());
+        empiezaConIv = empiezaConIv && std::equal(iv.begin(), iv.end(), c.begin());
+    }
+    CHECK(idaVuelta);
+    CHECK(tamano);
+    CHECK(empiezaConIv);
+
+    // El mismo texto con IV distintos da cifrados distintos
+    const std::string hola = "Hola mundo";
+    const std::vector<uint8_t> m(hola.begin(), hola.end());
+    std::array<uint8_t, BLOCK_BYTES> iv2 = iv;
+    iv2[7] ^= 1;
+    CHECK(Cbc::encrypt(m, s, iv) != Cbc::encrypt(m, s, iv2));
+    CHECK(Cbc::encrypt(m, s) != Cbc::encrypt(m, s)); // dos IV aleatorios
+
+    // 3 bloques iguales en el mensaje dan 3 bloques cifrados distintos (por eso no ECB)
+    const std::vector<uint8_t> aes(24, 'A');
+    const std::vector<uint8_t> c = Cbc::encrypt(aes, s, iv);
+    const uint64_t c1 = Block::bytesToBlock(c, 8), c2 = Block::bytesToBlock(c, 16), c3 = Block::bytesToBlock(c, 24);
+    CHECK(c1 != c2 && c2 != c3 && c1 != c3);
+
+    // Largos invalidos al descifrar: solo IV, no multiplo de 8, vacio
+    CHECK_THROWS(Cbc::decrypt(std::vector<uint8_t>(8, 0), s), std::invalid_argument);
+    CHECK_THROWS(Cbc::decrypt(std::vector<uint8_t>(20, 0), s), std::invalid_argument);
+    CHECK_THROWS(Cbc::decrypt(std::vector<uint8_t>(), s), std::invalid_argument);
+
+    // Con una clave equivocada nunca se recupera el original (error o basura)
+    const Schedule otra = KeySchedule::expand(keyFromText("0123456789ABCDEG"));
+    bool nuncaOriginal = true;
+    for (int i = 0; i < 200; i++) {
+        std::array<uint8_t, BLOCK_BYTES> ivi = iv;
+        ivi[0] = static_cast<uint8_t>(i);
+        try {
+            nuncaOriginal = nuncaOriginal && (Cbc::decrypt(Cbc::encrypt(m, s, ivi), otra) != m);
+        } catch (const std::invalid_argument&) {
+            // relleno invalido: es lo esperado
+        }
+    }
+    CHECK(nuncaOriginal);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -479,6 +540,7 @@ int main() {
     run("BlockCipher", testBlockCipher);
     run("BlockCipher vectores", testBlockCipherVectors);
     run("Padding", testPadding);
+    run("Cbc", testCbc);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;
