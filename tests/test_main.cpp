@@ -235,6 +235,30 @@ static void testPermuteBits() {
     CHECK(mismosUnos);
 }
 
+static void testRotations() {
+    // Vectores verificados a mano
+    CHECK(SPN::rotl(0x1ULL, 13) == 0x2000ULL);
+    CHECK(SPN::rotl(0x8000000000000000ULL, 1) == 0x1ULL);
+    CHECK(SPN::rotr(0x1ULL, 1) == 0x8000000000000000ULL);
+
+    // rotr deshace rotl para todos los n validos
+    std::mt19937_64 gen(2024);
+    bool idaVuelta = true;
+    for (unsigned n = 1; n <= 63; n++) {
+        for (int i = 0; i < 100; i++) {
+            const uint64_t v = gen();
+            idaVuelta = idaVuelta && (SPN::rotr(SPN::rotl(v, n), n) == v);
+        }
+    }
+    CHECK(idaVuelta);
+
+    // n = 0 y n = 64 desplazarian 64 bits (comportamiento indefinido)
+    CHECK_THROWS(SPN::rotl(1, 0), std::invalid_argument);
+    CHECK_THROWS(SPN::rotl(1, 64), std::invalid_argument);
+    CHECK_THROWS(SPN::rotr(1, 0), std::invalid_argument);
+    CHECK_THROWS(SPN::rotr(1, 64), std::invalid_argument);
+}
+
 // Corre un grupo de pruebas; una excepcion inesperada cuenta como fallo y no detiene a los demas
 static void run(const char* nombre, void (*prueba)()) {
     try {
@@ -254,6 +278,7 @@ int main() {
     run("Prng", testPrng);
     run("Tables", testTables);
     run("permuteBits", testPermuteBits);
+    run("rotaciones", testRotations);
 
     std::cout << g_total << " checks, " << g_fail << " fallos\n";
     return g_fail == 0 ? 0 : 1;

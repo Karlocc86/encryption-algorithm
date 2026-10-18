@@ -40,6 +40,24 @@ public:
      */
     static uint64_t permuteBits(uint64_t block, const std::array<uint8_t, 64>& table);
 
+    /**
+     * Rotacion circular a la izquierda: los bits que salen por arriba entran por abajo.
+     * @param block bloque de 64 bits
+     * @param n posiciones a rotar, de 1 a 63
+     * @return el bloque rotado
+     * @throws std::invalid_argument si n es 0 o mayor que 63
+     */
+    static uint64_t rotl(uint64_t block, unsigned n);
+
+    /**
+     * Rotacion circular a la derecha; deshace rotl con el mismo n.
+     * @param block bloque de 64 bits
+     * @param n posiciones a rotar, de 1 a 63
+     * @return el bloque rotado
+     * @throws std::invalid_argument si n es 0 o mayor que 63
+     */
+    static uint64_t rotr(uint64_t block, unsigned n);
+
 };
 
 
