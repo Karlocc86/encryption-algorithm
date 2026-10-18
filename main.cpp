@@ -7,6 +7,8 @@
 // puedan usar la salida sin confundirla con un mensaje de error.
 //
 
+#include <array>
+#include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <iomanip>
@@ -28,6 +30,7 @@
 #include <io.h>
 #endif
 
+#include "Avalanche.h"
 #include "Cbc.h"
 #include "Config.h"
 #include "Encoding.h"
@@ -44,6 +47,7 @@ static void printUsage() {
                  "  ciber enc <entrada> <salida> <clave>  cifra un archivo (salida binaria: IV || cifrado)\n"
                  "  ciber dec <entrada> <salida> <clave>  descifra un archivo\n"
                  "  ciber tables <clave>                  muestra las tablas que salen de la clave\n"
+                 "  ciber avalanche                       mide la avalancha de texto plano y de clave\n"
                  "La clave es de 1 a 16 caracteres o de exactamente 32 digitos hexadecimales.\n";
 }
 
@@ -152,6 +156,22 @@ static int cmdTables(const std::vector<std::string> &a) {
     return 0;
 }
 
+static int cmdAvalanche() {
+    // Mismos parametros que la prueba de ciber_tests (los de la guia)
+    const std::array<uint8_t, KEY_BYTES> clave = Encoding::parseKey("0123456789ABCDEF");
+    const auto inicio = std::chrono::steady_clock::now();
+    const double plano = Avalanche::plaintext(clave, 1000, 12345);
+    const double deClave = Avalanche::key(clave, 50, 12345);
+    const double segundos = std::chrono::duration<double>(std::chrono::steady_clock::now() - inicio).count();
+
+    std::cout << std::fixed << std::setprecision(2)
+              << "Clave 0123456789ABCDEF, std::mt19937_64(12345)\n"
+              << "Avalancha de texto plano: " << plano << " bits de 64 (1000 bloques x 64 bits volteados)\n"
+              << "Avalancha de clave:       " << deClave << " bits de 64 (50 bloques x 128 bits de clave volteados)\n"
+              << "Ideal: 32 bits. Aceptable: de 28 a 36. Tiempo: " << segundos << " s\n";
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
 #ifdef _WIN32
     // stdout en modo binario: sin esto Windows cambia cada \n por \r\n y un texto
@@ -171,6 +191,7 @@ int main(int argc, char *argv[]) {
         if (cmd == "enc" && a.size() == 5) return cmdEnc(a, argv);
         if (cmd == "dec" && a.size() == 5) return cmdDec(a, argv);
         if (cmd == "tables" && a.size() == 3) return cmdTables(a);
+        if (cmd == "avalanche" && a.size() == 2) return cmdAvalanche();
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
