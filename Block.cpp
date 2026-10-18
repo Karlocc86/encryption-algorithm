@@ -31,7 +31,7 @@ uint64_t Block::bytesToBlock(const std::vector<uint8_t> &datos, size_t inicio) {
         //operacion << 8: 10101010 00000000
         //operacion |=  : 00000000 11111111
         //Resultado     : 10101010 11111111 <- asi vamos construyendo el bloque
-        bloque |= static_cast<uint64_t>(datos[inicio + i]) << (56 - 8 * 1);
+        bloque |= static_cast<uint64_t>(datos[inicio + i]) << (56 - 8 * i);
 
     }
 
@@ -40,10 +40,10 @@ uint64_t Block::bytesToBlock(const std::vector<uint8_t> &datos, size_t inicio) {
 }
 
 
-void Block::blockToBytes(uint64_t bloque, std::vector<int8_t> &datos, size_t inicio) {
+void Block::blockToBytes(uint64_t bloque, std::vector<uint8_t> &datos, size_t inicio) {
 
     if (inicio > datos.size() || datos.size() - inicio < 8) throw
-    std::out_of_range("blocToBytes: no hay espacio para 8 bytes");
+    std::out_of_range("blockToBytes: no hay espacio para 8 bytes");
 
     for (size_t i  = 0; i < 8 ; i++) {
 

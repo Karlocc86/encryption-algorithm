@@ -17,7 +17,7 @@ public:
     static uint64_t bytesToBlock(const std::vector<uint8_t>& datos, size_t inicio);
 
     //
-    static void blockToBytes(uint64_t bloque, std::vector<int8_t>& datos, size_t inicio);
+    static void blockToBytes(uint64_t bloque, std::vector<uint8_t>& datos, size_t inicio);
 
 
 };
