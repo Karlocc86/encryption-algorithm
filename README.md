@@ -6,7 +6,7 @@ KDSPN-64 es una red de sustitución-permutación (SPN) de 64 bits de bloque y 12
 
 > **Es un cifrado de juguete con fines didácticos.** No es seguro y no debe usarse para proteger información real. Ver [Limitaciones y ataques conocidos](#limitaciones-y-ataques-conocidos).
 
-Desarrollado como proyecto de la materia *Integration of Computer Security in Networks and Software Systems* (Tecnológico de Monterrey).
+Desarrollado como proyecto de la materia _Integration of Computer Security in Networks and Software Systems_ (Tecnológico de Monterrey).
 
 ## Contenido
 
@@ -36,37 +36,37 @@ La idea de que las S-boxes dependan de la clave tiene antecedentes reales: Blowf
 
 ## Parámetros
 
-| Parámetro | Valor |
-| --- | --- |
-| Estructura | SPN con tablas derivadas de la clave |
-| Bloque | 64 bits (8 bytes) |
-| Clave | 128 bits (1 a 16 caracteres, o exactamente 32 dígitos hexadecimales) |
-| Rondas | 10, más un XOR final con la subclave 11 (blanqueo) |
-| Modo de operación | CBC con relleno PKCS#7 e IV aleatorio |
-| Salida de texto | Hexadecimal en mayúsculas |
-| Generador para las tablas | splitmix64 (siembra) + xoshiro256\*\* |
+| Parámetro                 | Valor                                                                |
+| ------------------------- | -------------------------------------------------------------------- |
+| Estructura                | SPN con tablas derivadas de la clave                                 |
+| Bloque                    | 64 bits (8 bytes)                                                    |
+| Clave                     | 128 bits (1 a 16 caracteres, o exactamente 32 dígitos hexadecimales) |
+| Rondas                    | 10, más un XOR final con la subclave 11 (blanqueo)                   |
+| Modo de operación         | CBC con relleno PKCS#7 e IV aleatorio                                |
+| Salida de texto           | Hexadecimal en mayúsculas                                            |
+| Generador para las tablas | splitmix64 (siembra) + xoshiro256\*\*                                |
 
 ## Estructura del repositorio
 
-| Archivo | Descripción |
-| --- | --- |
-| `Config.h` | Constantes: `BLOCK_BYTES`, `KEY_BYTES`, `ROUNDS`, `SUBKEYS`, `MAX_TEXT_BYTES`, `MAX_TABLE_ATTEMPTS` |
-| `txtToBinary.h/.cpp` | Lectura y escritura de archivos en modo binario |
-| `Block.h/.cpp` | Conversión entre 8 bytes y un `uint64_t` (el primer byte va a los bits altos) |
-| `Prng.h/.cpp` | splitmix64 y xoshiro256\*\*, deterministas en cualquier compilador |
-| `Tables.h/.cpp` | `PRESENT_SBOX` (solo para pruebas), `invertTable`, `modInverse` |
-| `SPN.h/.cpp` | Operaciones de la ronda: `subNibbles`, `permuteBits`, `rotl`, `rotr` |
-| `KeySchedule.h/.cpp` | Deriva todas las tablas de la clave (`Schedule`) |
-| `BlockCipher.h/.cpp` | Cifrado y descifrado de un bloque |
-| `Padding.h/.cpp` | Relleno PKCS#7 |
-| `Cbc.h/.cpp` | Modo CBC |
-| `Encoding.h/.cpp` | Hexadecimal y lectura de la clave del usuario |
-| `TextCipher.h/.cpp` | Cifrado y descifrado de texto (lo que usan la CLI y la GUI) |
-| `Avalanche.h/.cpp` | Medición del efecto avalancha |
-| `main.cpp` | Línea de comandos `ciber` |
-| `gui/ciber_gui.py` | Interfaz gráfica (Tkinter) que invoca a `ciber` |
-| `tests/test_main.cpp` | Pruebas (`ciber_tests`) |
-| `kdspn-animacion/` | Animación interactiva del algoritmo (TypeScript + Vite), en desarrollo |
+| Archivo               | Descripción                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `Config.h`            | Constantes: `BLOCK_BYTES`, `KEY_BYTES`, `ROUNDS`, `SUBKEYS`, `MAX_TEXT_BYTES`, `MAX_TABLE_ATTEMPTS` |
+| `txtToBinary.h/.cpp`  | Lectura y escritura de archivos en modo binario                                                     |
+| `Block.h/.cpp`        | Conversión entre 8 bytes y un `uint64_t` (el primer byte va a los bits altos)                       |
+| `Prng.h/.cpp`         | splitmix64 y xoshiro256\*\*, deterministas en cualquier compilador                                  |
+| `Tables.h/.cpp`       | `PRESENT_SBOX` (solo para pruebas), `invertTable`, `modInverse`                                     |
+| `SPN.h/.cpp`          | Operaciones de la ronda: `subNibbles`, `permuteBits`, `rotl`, `rotr`                                |
+| `KeySchedule.h/.cpp`  | Deriva todas las tablas de la clave (`Schedule`)                                                    |
+| `BlockCipher.h/.cpp`  | Cifrado y descifrado de un bloque                                                                   |
+| `Padding.h/.cpp`      | Relleno PKCS#7                                                                                      |
+| `Cbc.h/.cpp`          | Modo CBC                                                                                            |
+| `Encoding.h/.cpp`     | Hexadecimal y lectura de la clave del usuario                                                       |
+| `TextCipher.h/.cpp`   | Cifrado y descifrado de texto (lo que usan la CLI y la GUI)                                         |
+| `Avalanche.h/.cpp`    | Medición del efecto avalancha                                                                       |
+| `main.cpp`            | Línea de comandos `ciber`                                                                           |
+| `gui/ciber_gui.py`    | Interfaz gráfica (Tkinter) que invoca a `ciber`                                                     |
+| `tests/test_main.cpp` | Pruebas (`ciber_tests`)                                                                             |
+| `kdspn-animacion/`    | Animación interactiva del algoritmo (TypeScript + Vite), en desarrollo                              |
 
 ---
 
@@ -74,15 +74,15 @@ La idea de que las S-boxes dependan de la clave tiene antecedentes reales: Blowf
 
 ### La ronda
 
-Cada una de las 10 rondas aplica cinco operaciones al bloque `s` de 64 bits:
+Cada una de las 10 rondas aplica cinco operaciones al bloque `s` de 64 bits :
 
-| # | Operación | Código | Tipo |
-| --- | --- | --- | --- |
-| 1 | XOR con la subclave de la ronda | `s ^= K[r]` | Confusión |
-| 2 | S-box de 4 bits en cada uno de los 16 nibbles | `SPN::subNibbles(s, sbox)` | Confusión |
-| 3 | Permutación de los 64 bits | `SPN::permuteBits(s, perm)` | Difusión |
-| 4 | Multiplicación por un impar, módulo 2^64 | `s *= mul[r]` | Confusión y difusión |
-| 5 | Rotación circular a la izquierda | `SPN::rotl(s, rot[r])` | Difusión |
+| #   | Operación                                     | Código                      | Tipo                 |
+| --- | --------------------------------------------- | --------------------------- | -------------------- |
+| 1   | XOR con la subclave de la ronda               | `s ^= K[r]`                 | Confusión            |
+| 2   | S-box de 4 bits en cada uno de los 16 nibbles | `SPN::subNibbles(s, sbox)`  | Confusión            |
+| 3   | Permutación de los 64 bits                    | `SPN::permuteBits(s, perm)` | Difusión             |
+| 4   | Multiplicación por un impar, módulo 2^64      | `s *= mul[r]`               | Confusión y difusión |
+| 5   | Rotación circular a la izquierda              | `SPN::rotl(s, rot[r])`      | Difusión             |
 
 Al final de las 10 rondas: `s ^= K[10]` (blanqueo).
 
@@ -143,13 +143,13 @@ flowchart LR
 
 La clave de 16 bytes se parte en dos mitades de 64 bits (`hi` y `lo`, con `Block::bytesToBlock`). Con ellas se siembra el generador y se derivan las piezas **en este orden exacto**; cambiar el orden produce otro cifrado.
 
-| # | Pieza | Cómo se obtiene | Por qué es invertible |
-| --- | --- | --- | --- |
-| 1 | S-box de 4 bits | Barajar 0 a 15 (Fisher-Yates) hasta que no tenga puntos fijos | Es una permutación: su inversa es otra tabla |
-| 2 | Permutación de 64 bits | Barajar 0 a 63 hasta que cumpla la condición de los nibbles | Es una permutación: su inversa es otra tabla |
-| 3 | 10 rotaciones | `1 + next() % 63`: entre 1 y 63 | Se rota hacia el otro lado |
-| 4 | 10 multiplicadores | `next() \| 1`: impar | Todo impar tiene inverso módulo 2^64 |
-| 5 | 11 subclaves | `next()` | El XOR se deshace con el mismo XOR |
+| #   | Pieza                  | Cómo se obtiene                                               | Por qué es invertible                        |
+| --- | ---------------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| 1   | S-box de 4 bits        | Barajar 0 a 15 (Fisher-Yates) hasta que no tenga puntos fijos | Es una permutación: su inversa es otra tabla |
+| 2   | Permutación de 64 bits | Barajar 0 a 63 hasta que cumpla la condición de los nibbles   | Es una permutación: su inversa es otra tabla |
+| 3   | 10 rotaciones          | `1 + next() % 63`: entre 1 y 63                               | Se rota hacia el otro lado                   |
+| 4   | 10 multiplicadores     | `next() \| 1`: impar                                          | Todo impar tiene inverso módulo 2^64         |
+| 5   | 11 subclaves           | `next()`                                                      | El XOR se deshace con el mismo XOR           |
 
 ### El generador
 
@@ -165,13 +165,13 @@ La permutación se acepta solo si **los 4 bits de cada nibble van a 4 nibbles di
 
 Barajadas necesarias, medidas con las 5 claves de prueba:
 
-| Clave | Intentos S-box | Intentos permutación |
-| --- | --- | --- |
-| 16 bytes `0x00` | 8 | 103 |
-| 16 bytes `0xFF` | 2 | 17 |
-| `0123456789ABCDEF` | 3 | 243 |
-| `a` (rellena con ceros) | 4 | 205 |
-| aleatoria (`mt19937_64(99)`) | 6 | 150 |
+| Clave                        | Intentos S-box | Intentos permutación |
+| ---------------------------- | -------------- | -------------------- |
+| 16 bytes `0x00`              | 8              | 103                  |
+| 16 bytes `0xFF`              | 2              | 17                   |
+| `0123456789ABCDEF`           | 3              | 243                  |
+| `a` (rellena con ceros)      | 4              | 205                  |
+| aleatoria (`mt19937_64(99)`) | 6              | 150                  |
 
 El límite de seguridad es `MAX_TABLE_ATTEMPTS` = 1 000 000. Si se superara, `expand` lanza `std::runtime_error`; en la práctica bastan unos cientos de intentos.
 
@@ -217,10 +217,10 @@ Voltear un solo bit del texto plano cambia en promedio 32.01 de los 64 bits del 
 
 ### Las tablas cambian con la clave
 
-| Clave | S-box derivada |
-| --- | --- |
-| `0123456789ABCDEF` | `4DE8BC23615F7A90` |
-| `otra clave` | `3C0D26A9EB158F47` |
+| Clave                              | S-box derivada     |
+| ---------------------------------- | ------------------ |
+| `0123456789ABCDEF`                 | `4DE8BC23615F7A90` |
+| `otra clave`                       | `3C0D26A9EB158F47` |
 | `00112233445566778899AABBCCDDEEFF` | `9BCE0F4A125378D6` |
 
 ---
@@ -288,14 +288,14 @@ Después de agregar un `.cpp` nuevo hay que incluirlo en `cipher_core` y recarga
 
 ### Línea de comandos
 
-| Comando | Descripción |
-| --- | --- |
-| `ciber enc-text "<texto>" <clave>` | Cifra un texto (máx. 100 bytes) e imprime el hexadecimal |
-| `ciber dec-text <hex> <clave>` | Descifra el hexadecimal e imprime el texto |
-| `ciber enc <entrada> <salida> <clave>` | Cifra un archivo; la salida es binaria (`IV \|\| cifrado`) |
-| `ciber dec <entrada> <salida> <clave>` | Descifra un archivo |
-| `ciber tables <clave>` | Muestra la S-box, la permutación, las rotaciones, los multiplicadores y las subclaves |
-| `ciber avalanche` | Mide la avalancha de texto plano y de clave |
+| Comando                                | Descripción                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| `ciber enc-text "<texto>" <clave>`     | Cifra un texto (máx. 100 bytes) e imprime el hexadecimal                              |
+| `ciber dec-text <hex> <clave>`         | Descifra el hexadecimal e imprime el texto                                            |
+| `ciber enc <entrada> <salida> <clave>` | Cifra un archivo; la salida es binaria (`IV \|\| cifrado`)                            |
+| `ciber dec <entrada> <salida> <clave>` | Descifra un archivo                                                                   |
+| `ciber tables <clave>`                 | Muestra la S-box, la permutación, las rotaciones, los multiplicadores y las subclaves |
+| `ciber avalanche`                      | Mide la avalancha de texto plano y de clave                                           |
 
 Devuelve 0 si todo va bien y 1 si hay cualquier error. Los errores van a `stderr` y en ese caso no se escribe nada en `stdout`. Se rechazan una salida igual a la entrada, un texto de más de 100 bytes, una clave o un hexadecimal inválidos y un archivo inexistente. Si el descifrado de un archivo falla, no se escribe ningún archivo de salida.
 
@@ -322,15 +322,15 @@ python gui/ciber_gui.py
 
 La interfaz no contiene nada del algoritmo: cada botón ejecuta `ciber`. La ruta de `ciber.exe` está en el campo superior; por defecto toma el compilado más reciente de `cmake-build-debug`, `cmake-build-release` o `cmake-build-claude`.
 
-| Elemento | Descripción |
-| --- | --- |
-| Clave | 1 a 16 caracteres o 32 dígitos hexadecimales |
-| Texto original | Con contador de bytes; se pone en rojo después de 100 |
-| `Cifrar ↓` | Cifra el texto y muestra el hexadecimal abajo |
-| Texto cifrado | Editable: admite pegar un cifrado, incluso partido en líneas |
-| `Descifrar ↑` | Descifra el cuadro inferior y muestra el texto arriba |
+| Elemento                              | Descripción                                                                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Clave                                 | 1 a 16 caracteres o 32 dígitos hexadecimales                                                                            |
+| Texto original                        | Con contador de bytes; se pone en rojo después de 100                                                                   |
+| `Cifrar ↓`                            | Cifra el texto y muestra el hexadecimal abajo                                                                           |
+| Texto cifrado                         | Editable: admite pegar un cifrado, incluso partido en líneas                                                            |
+| `Descifrar ↑`                         | Descifra el cuadro inferior y muestra el texto arriba                                                                   |
 | `Abrir archivo` / `Guardar resultado` | Cada cuadro tiene los suyos: arriba cargan o guardan el texto original y abajo el texto cifrado (hexadecimal), en UTF-8 |
-| `Ver tablas` | Muestra las tablas derivadas de la clave escrita |
+| `Ver tablas`                          | Muestra las tablas derivadas de la clave escrita                                                                        |
 
 Los errores (clave inválida, hexadecimal inválido, clave equivocada, texto de más de 100 bytes) se muestran en un mensaje sin cerrar el programa.
 
@@ -352,17 +352,17 @@ npm run build   # revisa tipos y genera dist/
 
 `ciber_tests` ejecuta **229 comprobaciones** sin dependencias externas (un marco `CHECK` propio), con 0 advertencias de compilación con `-Wall -Wextra`:
 
-| Grupo | Qué comprueba |
-| --- | --- |
-| Block, txtToBinary | Vectores fijos, ida y vuelta, `ó` como 195 179, `\r\n`, archivo vacío, excepciones |
-| Prng | Vector publicado de splitmix64 (`0xE220A8397B1DCDAF`), determinismo, semillas distintas dan secuencias distintas |
-| Tables | Vectores de `modInverse`; `m * modInverse(m) == 1` para 1000 impares; inversión de tablas; tablas inválidas |
-| SPN | Vectores con la S-box y la permutación de PRESENT; ida y vuelta de 10 000 valores; la permutación conserva el número de unos; rotaciones |
-| KeySchedule | Para 5 claves: S-box sin puntos fijos, condición de los nibbles, rotaciones de 1 a 63, impares con inverso, 11 subclaves, determinismo, claves distintas dan tablas distintas |
-| BlockCipher | Ida y vuelta de 10 000 bloques por clave; una clave que difiere en 1 bit no descifra; vectores de regresión |
-| Padding, Cbc | Largos de relleno; rellenos inválidos; ida y vuelta de 0 a 64, 100 y 1000 bytes; IV distintos dan cifrados distintos; 3 bloques iguales cifran distinto |
-| Encoding, TextCipher | Hexadecimal con espacios y minúsculas; claves válidas e inválidas; 100 bytes sí y 101 no; clave equivocada nunca da el original |
-| Avalancha | Los dos promedios entre 28 y 36, en menos de 10 s |
+| Grupo                | Qué comprueba                                                                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Block, txtToBinary   | Vectores fijos, ida y vuelta, `ó` como 195 179, `\r\n`, archivo vacío, excepciones                                                                                            |
+| Prng                 | Vector publicado de splitmix64 (`0xE220A8397B1DCDAF`), determinismo, semillas distintas dan secuencias distintas                                                              |
+| Tables               | Vectores de `modInverse`; `m * modInverse(m) == 1` para 1000 impares; inversión de tablas; tablas inválidas                                                                   |
+| SPN                  | Vectores con la S-box y la permutación de PRESENT; ida y vuelta de 10 000 valores; la permutación conserva el número de unos; rotaciones                                      |
+| KeySchedule          | Para 5 claves: S-box sin puntos fijos, condición de los nibbles, rotaciones de 1 a 63, impares con inverso, 11 subclaves, determinismo, claves distintas dan tablas distintas |
+| BlockCipher          | Ida y vuelta de 10 000 bloques por clave; una clave que difiere en 1 bit no descifra; vectores de regresión                                                                   |
+| Padding, Cbc         | Largos de relleno; rellenos inválidos; ida y vuelta de 0 a 64, 100 y 1000 bytes; IV distintos dan cifrados distintos; 3 bloques iguales cifran distinto                       |
+| Encoding, TextCipher | Hexadecimal con espacios y minúsculas; claves válidas e inválidas; 100 bytes sí y 101 no; clave equivocada nunca da el original                                               |
+| Avalancha            | Los dos promedios entre 28 y 36, en menos de 10 s                                                                                                                             |
 
 **Vectores cruzados.** Como el cifrado es propio, no existen vectores publicados. Para no depender solo de este código, se contrastó con una implementación independiente de la especificación escrita en Python (no incluida en el repositorio). Las tablas derivadas (S-box, permutación, rotaciones, multiplicadores, subclaves y número de intentos) y los cifrados de 3 bloques con 3 claves coinciden exactamente con los del C++, y quedaron guardados como pruebas de regresión.
 
